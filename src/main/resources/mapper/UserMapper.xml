@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ssm.mapper.UserMapper">
+
+	<resultMap type="com.ssm.pojo.User" id="userResultMap">
+		<result column="id" property="id"/>
+		<result column="usercode" property="usercode"/>
+		<result column="username" property="username"/>
+		<result column="password" property="password"/>
+		<result column="salt" property="salt"/>
+		<result column="locked" property="locked"/>
+	</resultMap>
+
+	<sql id="sys_user_result">
+		id,usercode,username,password,salt,locked
+	</sql>
+
+	<sql id="user_where">
+		<if test="userVo.username != null and userVo.username != ''">
+			AND username LIKE '%${userVo.username}%'
+		</if>
+	</sql>
+
+	<sql id="which_orderBy">
+		<if test="userVo.order_column != null and userVo.order_column != ''">
+			<choose>
+				<when test="userVo.order_column == 0">
+					order by id ${userVo.order_column_dir}
+				</when>
+				<when test="userVo.order_column == 1">
+					order by usercode ${userVo.order_column_dir}
+				</when>
+				<when test="userVo.order_column == 2">
+					order by username ${userVo.order_column_dir}
+				</when>
+			</choose>
+		</if>
+	</sql>
+
+	<select id="queryUserPage" parameterType="com.ssm.vo.UserVo" resultMap="userResultMap">
+		select
+			<include refid="sys_user_result" />
+		from sys_user
+		<where>
+			<include refid="user_where"></include>
+		</where>
+		<include refid="which_orderBy"></include>
+		LIMIT ${userVo.start} , ${userVo.length}
+	</select>
+
+	<select id="queryUserTotal" parameterType="com.ssm.vo.UserVo" resultType="java.lang.Integer">
+		select
+			count(*)
+		from sys_user
+		<where>
+			<include refid="user_where"></include>
+		</where>
+	</select>
+
+	<select id="queryUserByUserCode" parameterType="java.lang.String" resultMap="userResultMap">
+		SELECT
+			<include refid="sys_user_result"></include>
+		FROM sys_user
+		WHERE
+			usercode = #{usercode}
+	</select>
+	
+	<select id="queryPermissionByUserId" parameterType="java.lang.String" resultType="com.ssm.pojo.SysPermission">
+		select
+			*
+		from sys_permission p
+		where
+		p.type = 'permission' and p.id in (
+			select rp.sys_permission_id from sys_role_permission rp
+			INNER JOIN
+			(select ur.sys_role_id from sys_user u
+			INNER JOIN sys_user_role ur
+			on u.id = ur.sys_user_id
+			where u.id = #{userId} )t
+			on t.sys_role_id = rp.sys_role_id
+		)
+	</select>
+
+	<select id="queryMenuByUserId" parameterType="java.lang.String" resultType="com.ssm.pojo.SysPermission">
+		select
+			*
+		from sys_permission p
+		where
+		p.type = 'menu' and p.id in (
+			select rp.sys_permission_id from sys_role_permission rp
+			INNER JOIN
+			(select ur.sys_role_id from sys_user u
+			INNER JOIN sys_user_role ur
+			on u.id = ur.sys_user_id
+			where u.id = #{userId} )t
+			on t.sys_role_id = rp.sys_role_id
+		)
+	</select>
+
+</mapper>
